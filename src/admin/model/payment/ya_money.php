@@ -12,6 +12,7 @@ class ModelPaymentYaMoney extends Model
     private $backupDirectory = 'yamodule/backup';
     private $versionDirectory = 'yamodule/updates';
     private $downloadDirectory = 'yamodule';
+    private $repository = 'actofgod/oc15-sdk-test';
 
     public function init($config)
     {
@@ -106,7 +107,7 @@ class ModelPaymentYaMoney extends Model
     {
         $result = array();
 
-        $dir = DIR_DOWNLOAD . '/update_module';
+        $dir = DIR_DOWNLOAD . '/' . $this->backupDirectory;
         $handle = opendir($dir);
         while (($entry = readdir($handle)) !== false) {
             if ($entry === '.' || $entry === '..') {
@@ -223,7 +224,7 @@ class ModelPaymentYaMoney extends Model
         }
 
         $connector = new GitHubConnector();
-        $version = $connector->getLatestRelease('actofgod/oc15-sdk-test');
+        $version = $connector->getLatestRelease($this->repository);
         if (empty($version)) {
             return array();
         }
@@ -257,7 +258,7 @@ class ModelPaymentYaMoney extends Model
         }
 
         $connector = new GitHubConnector();
-        $fileName = $connector->downloadRelease('actofgod/oc15-sdk-test', $tag, $dir);
+        $fileName = $connector->downloadRelease($this->repository, $tag, $dir);
         if (empty($fileName)) {
             $this->log('error', 'Не удалось загрузить архив с обновлением');
             return false;
@@ -294,7 +295,7 @@ class ModelPaymentYaMoney extends Model
         $dir = DIR_DOWNLOAD . '/' . $this->downloadDirectory;
         $newChangeLog = $dir . '/CHANGELOG-' . $newVersion . '.md';
         if (!file_exists($newChangeLog)) {
-            $fileName = $connector->downloadLatestChangeLog('actofgod/oc15-sdk-test', $dir);
+            $fileName = $connector->downloadLatestChangeLog($this->repository, $dir);
             if (!empty($fileName)) {
                 rename($dir . '/' . $fileName, $newChangeLog);
             }
@@ -302,7 +303,7 @@ class ModelPaymentYaMoney extends Model
 
         $oldChangeLog = $dir . '/CHANGELOG-' . $currentVersion . '.md';
         if (!file_exists($oldChangeLog)) {
-            $fileName = $connector->downloadLatestChangeLog('actofgod/oc15-sdk-test', $dir);
+            $fileName = $connector->downloadLatestChangeLog($this->repository, $dir);
             if (!empty($fileName)) {
                 rename($dir . '/' . $fileName, $oldChangeLog);
             }

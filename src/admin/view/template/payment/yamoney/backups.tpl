@@ -24,7 +24,6 @@
     </div>
     <?php endif; ?>
 
-    <?php if ($directory_exists) : ?>
     <?php if (empty($backups)) : ?>
     <p>Не найдено ни одного бэкапа.</p>
     <?php else: ?>
@@ -55,9 +54,6 @@
         </tbody>
     </table>
 
-    <?php endif; ?>
-    <?php else: ?>
-    <p>Директория бэкапов "<?php echo $directory; ?>" не найдена или недоступна для записи.</p>
     <?php endif; ?>
     <form id="action-form" method="post">
         <input type="hidden" name="action" id="action-form-action" value="none" />

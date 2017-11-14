@@ -42,6 +42,7 @@
     <button type="button" id="update-module" class="btn btn-primary">Обновить модуль</button>
     <form method="post" id="update-form">
         <input name="update" value="1" type="hidden" />
+        <input name="version" value="<?php echo htmlspecialchars($newVersion) ?>" type="hidden" />
     </form>
 
     <?php else: ?>

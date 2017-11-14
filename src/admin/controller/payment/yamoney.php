@@ -21,7 +21,7 @@ class ControllerPaymentYaMoney extends Controller
     /**
      * @var string
      */
-    private $moduleVersion = '1.0.2';
+    private $moduleVersion = '1.0.3';
 
     /**
      * @var ModelPaymentYaMoney
@@ -85,6 +85,12 @@ class ControllerPaymentYaMoney extends Controller
         $this->data['geoZoneList'] = $this->getValidGeoZoneList();
         $this->data['tax_classes'] = $this->getValidTaxRateList();
         $this->data['pages_mpos'] = $this->getCatalogPages();
+
+        $this->data['ya_updater_enable'] = $this->config->get('ya_updater_enable');
+        $this->applyVersionInfo();
+        $this->applyBackups();
+        $this->data['update_action'] = $this->url->link('payment/yamoney/checkVersion', 'token=' . $this->session->data['token'], 'SSL');
+        $this->data['backup_action'] = $this->url->link('payment/yamoney/backups', 'token=' . $this->session->data['token'], 'SSL');
 
         $post = $this->request->post;
         foreach ($this->getModel()->getPaymentMethods() as $method) {
@@ -160,9 +166,10 @@ class ControllerPaymentYaMoney extends Controller
 
     public function backups()
     {
-        $dirName = DIR_DOWNLOAD . '/update_module';
-        if (!is_dir($dirName)) {
-            mkdir($dirName);
+        $link = $this->url->link('payment/yamoney', 'token=' . $this->session->data['token'], 'SSL');
+        if (!$this->config->get('ya_updater_enable')) {
+            $this->redirect($link);
+            return;
         }
 
         if (!empty($this->request->post['action'])) {
@@ -170,7 +177,6 @@ class ControllerPaymentYaMoney extends Controller
                 case 'restore';
                     if (!empty($this->request->post['file_name'])) {
                         if ($this->getModel()->restoreBackup($this->request->post['file_name'])) {
-                            $link = $this->url->link('payment/yamoney/backups', 'token=' . $this->session->data['token'], 'SSL');
                             $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version'] . ' была успешно восстановлена из бэкапа ' . $this->request->post['file_name'];
                             $this->redirect($link);
                         }
@@ -180,7 +186,6 @@ class ControllerPaymentYaMoney extends Controller
                 case 'remove':
                     if (!empty($this->request->post['file_name'])) {
                         if ($this->getModel()->removeBackup($this->request->post['file_name'])) {
-                            $link = $this->url->link('payment/yamoney/backups', 'token=' . $this->session->data['token'], 'SSL');
                             $this->session->data['flash_message'] = 'Бэкап ' . $this->request->post['file_name'] . ' был успешно удалён';
                             $this->redirect($link);
                         }
@@ -190,18 +195,7 @@ class ControllerPaymentYaMoney extends Controller
             }
         }
 
-        if (!empty($this->session->data['flash_message'])) {
-            $this->data['success'] = $this->session->data['flash_message'];
-            unset($this->session->data['flash_message']);
-        }
-
-        $this->data['directory_exists'] = file_exists($dirName);
-        $this->data['directory'] = $dirName;
-        $this->data['backups'] = $this->getModel()->getBackupList();
-
-        if ($this->data['directory_exists'] && isset($this->request->get['backup']) && $this->request->get['backup'] == '1') {
-            $this->getModel()->createBackup($this->moduleVersion);
-        }
+        $this->applyBackups();
 
         $this->template = 'payment/yamoney/backups.tpl';
         $this->children = array(
@@ -213,38 +207,36 @@ class ControllerPaymentYaMoney extends Controller
 
     public function checkVersion()
     {
-        $versionInfo = $this->getModel()->checkModuleVersion(!isset($this->request->post['force']));
-        if (version_compare($versionInfo['version'], $this->moduleVersion) > 0) {
+        $link = $this->url->link('payment/yamoney', 'token=' . $this->session->data['token'], 'SSL');
+        if (!$this->config->get('ya_updater_enable')) {
+            $this->redirect($link);
+            return;
+        }
 
-            if (isset($this->request->post['update']) && $this->request->post['update'] == '1') {
-                $fileName = $this->getModel()->downloadLastVersion($versionInfo['tag']);
-                if (!empty($fileName)) {
-                    if ($this->getModel()->createBackup($this->moduleVersion)) {
-                        if ($this->getModel()->unpackLastVersion($fileName)) {
-                            $link = $this->url->link('payment/yamoney/checkVersion', 'token=' . $this->session->data['token'], 'SSL');
-                            $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version'] . ' была успешно загружена и установлена';
-                            $this->redirect($link);
-                        } else {
-                            $this->data['errors'][] = 'Не удалось распаковать загруженный архив ' . $fileName . ', подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
-                        }
+        if (isset($this->request->post['force'])) {
+            $this->applyVersionInfo(true);
+            $this->redirect($link);
+        }
+
+        if (isset($this->request->post['update']) && $this->request->post['update'] == '1') {
+            $fileName = $this->getModel()->downloadLastVersion($versionInfo['tag']);
+            if (!empty($fileName)) {
+                if ($this->getModel()->createBackup($this->moduleVersion)) {
+                    if ($this->getModel()->unpackLastVersion($fileName)) {
+                        $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version'] . ' была успешно загружена и установлена';
+                        $this->redirect($link);
                     } else {
-                        $this->data['errors'][] = 'Не удалось создать бэкап установленной версии модуля, подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                        $this->data['errors'][] = 'Не удалось распаковать загруженный архив ' . $fileName . ', подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
                     }
                 } else {
-                    $this->data['errors'][] = 'Не удалось загрузить архив с новой версией, подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                    $this->data['errors'][] = 'Не удалось создать бэкап установленной версии модуля, подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
                 }
+            } else {
+                $this->data['errors'][] = 'Не удалось загрузить архив с новой версией, подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
             }
-
-            $this->data['new_version_available'] = true;
-            $this->data['changelog'] = $this->getModel()->getChangeLog($this->moduleVersion, $versionInfo['version']);
-            $this->data['newVersion'] = $versionInfo['version'];
-        } else {
-            $this->data['new_version_available'] = false;
-            $this->data['changelog'] = '';
-            $this->data['newVersion'] = $this->moduleVersion;
         }
-        $this->data['currentVersion'] = $this->moduleVersion;
-        $this->data['newVersionInfo'] = $versionInfo;
+
+        $this->applyVersionInfo();
 
         $this->template = 'payment/yamoney/check_module_version.tpl';
         $this->children = array(
@@ -333,6 +325,8 @@ class ControllerPaymentYaMoney extends Controller
             $settings['ya_money_on'] = '0';
             $settings['ya_billing_enable'] = '0';
         }
+
+        $settings['ya_updater_enable'] = (isset($data['ya_updater_enable']) && $data['ya_updater_enable']);
 
         foreach ($this->getModel()->getPaymentMethods() as $method) {
             foreach ($method->getSettings() as $param) {
@@ -454,5 +448,39 @@ class ControllerPaymentYaMoney extends Controller
         } else {
             return false;
         }
+    }
+
+    private function applyVersionInfo($force = false)
+    {
+        if (!$this->config->get('ya_updater_enable')) {
+            return;
+        }
+
+        $versionInfo = $this->getModel()->checkModuleVersion($force);
+        if (version_compare($versionInfo['version'], $this->moduleVersion) > 0) {
+            $this->data['new_version_available'] = true;
+            $this->data['changelog'] = $this->getModel()->getChangeLog($this->moduleVersion, $versionInfo['version']);
+            $this->data['newVersion'] = $versionInfo['version'];
+        } else {
+            $this->data['new_version_available'] = false;
+            $this->data['changelog'] = '';
+            $this->data['newVersion'] = $this->moduleVersion;
+        }
+        $this->data['currentVersion'] = $this->moduleVersion;
+        $this->data['newVersionInfo'] = $versionInfo;
+    }
+
+    private function applyBackups()
+    {
+        if (!$this->config->get('ya_updater_enable')) {
+            return;
+        }
+
+        if (!empty($this->session->data['flash_message'])) {
+            $this->data['success'] = $this->session->data['flash_message'];
+            unset($this->session->data['flash_message']);
+        }
+
+        $this->data['backups'] = $this->getModel()->getBackupList();
     }
 }

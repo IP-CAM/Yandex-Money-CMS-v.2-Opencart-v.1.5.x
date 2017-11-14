@@ -45,6 +45,7 @@
             <li id="tabKassa" class="active"><a href="#kassa" class="my-tabs" aria-controls="kassa" role="tab" data-toggle="tab"><?php echo $lang->get('kassa_tab_label'); ?></a></li>
             <li id="tabMoney"><a href="#money" class="my-tabs" aria-controls="kassa" role="tab" data-toggle="tab"><?php echo $lang->get('wallet_tab_label'); ?></a></li>
             <li id="tabBilling"><a href="#yabilling" class="my-tabs" aria-controls="kassa" role="tab" data-toggle="tab"><?php echo $lang->get('tab_billing'); ?></a></li>
+            <li id="tabUpdater"><a href="#updater" class="my-tabs" aria-controls="kassa" role="tab" data-toggle="tab"><?php echo $lang->get('tab_updater'); ?></a></li>
             <div class="buttons text-right">
                 <a onclick="$('#form').submit();" class="button"><?php echo $lang->get('button_save'); ?></a>
                 <a href="<?php echo $cancel; ?>" class="button"><?php echo $lang->get('button_cancel'); ?></a>
@@ -54,6 +55,11 @@
             <?php include dirname(__FILE__) . '/yamoney/kassa.php'; ?>
             <?php include dirname(__FILE__) . '/yamoney/wallet.php'; ?>
             <?php include dirname(__FILE__) . '/yamoney/billing.php'; ?>
+            <?php if ($ya_updater_enable) : ?>
+            <?php include dirname(__FILE__) . '/yamoney/updater_enabled.php'; ?>
+            <?php else: ?>
+            <?php include dirname(__FILE__) . '/yamoney/updater_disabled.php'; ?>
+            <?php endif; ?>
         </div> <!-- для tab-контента -->
         </form>
     </div> <!-- есть в footer -->
@@ -83,6 +89,9 @@
                         "ya-new-status",
                         "ya-success-page"
                     ]
+                },
+                updater: {
+                    tabName: "tabUpdater"
                 }
             };
 
