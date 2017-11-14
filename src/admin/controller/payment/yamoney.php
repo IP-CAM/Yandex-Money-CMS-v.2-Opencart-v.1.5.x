@@ -21,7 +21,7 @@ class ControllerPaymentYaMoney extends Controller
     /**
      * @var string
      */
-    private $moduleVersion = '1.0.0';
+    private $moduleVersion = '1.0.1';
 
     /**
      * @var ModelPaymentYaMoney
@@ -204,6 +204,29 @@ class ControllerPaymentYaMoney extends Controller
         }
 
         $this->template = 'payment/yamoney/backups.tpl';
+        $this->children = array(
+            'common/header',
+            'common/footer'
+        );
+        $this->response->setOutput($this->render());
+    }
+
+    public function checkVersion()
+    {
+        $tag = $this->getModel()->checkModuleVersion();
+        $version = preg_replace('/[^\d\.]+/', '', $tag);
+        if (version_compare($this->moduleVersion, $version) > 1) {
+            $this->data['new_version_available'] = true;
+            $this->data['changelog'] = $this->getModel()->getChangeLog($this->moduleVersion, $version);
+            $this->data['newVersion'] = $version;
+        } else {
+            $this->data['new_version_available'] = false;
+            $this->data['changelog'] = '';
+            $this->data['newVersion'] = $this->moduleVersion;
+        }
+        $this->data['currentVersion'] = $this->moduleVersion;
+
+        $this->template = 'payment/yamoney/check_module_version.tpl';
         $this->children = array(
             'common/header',
             'common/footer'

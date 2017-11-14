@@ -180,6 +180,45 @@ class ModelPaymentYaMoney extends Model
         return true;
     }
 
+    public function checkModuleVersion()
+    {
+        $this->loadClasses();
+
+        $connector = new GitHubConnector();
+        return $connector->getLatestRelease('actofgod/oc15-sdk-test');
+    }
+
+    public function getChangeLog($currentVersion, $newVersion)
+    {
+        $connector = new GitHubConnector();
+
+        $newChangeLog = DIR_DOWNLOAD . '/CHANGELOG-' . $newVersion . '.md';
+        if (!file_exists($newChangeLog)) {
+            $fileName = $connector->downloadLatestChangeLog('actofgod/oc15-sdk-test', DIR_DOWNLOAD);
+            if (!empty($fileName)) {
+                rename($fileName, $newChangeLog);
+            }
+        }
+
+        $old = DIR_DOWNLOAD . '/CHANGELOG-' . $currentVersion . '.md';
+        if (!file_exists($oldChangeLog)) {
+            $fileName = $connector->downloadLatestChangeLog('actofgod/oc15-sdk-test', DIR_DOWNLOAD);
+            if (!empty($fileName)) {
+                rename($fileName, $newChangeLog);
+            }
+        }
+
+        $result = '';
+        if (file_exists($newChangeLog)) {
+            $old = DIR_DOWNLOAD . '/CHANGELOG-' . $currentVersion . '.md';
+            $diff = $connector->diffChangeLog($old, $newChangeLog);
+            if (!empty($diff)) {
+                $result = str_replace(array("\n"), array("<br />\n"), $diff);
+            }
+        }
+        return $result;
+    }
+
     private function formatSize($size)
     {
         static $sizes = array(
