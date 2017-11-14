@@ -21,7 +21,7 @@ class ControllerPaymentYaMoney extends Controller
     /**
      * @var string
      */
-    private $moduleVersion = '1.0.1';
+    private $moduleVersion = '1.0.2';
 
     /**
      * @var ModelPaymentYaMoney
@@ -213,18 +213,38 @@ class ControllerPaymentYaMoney extends Controller
 
     public function checkVersion()
     {
-        $tag = $this->getModel()->checkModuleVersion();
-        $version = preg_replace('/[^\d\.]+/', '', $tag);
-        if (version_compare($this->moduleVersion, $version) > 1) {
+        $versionInfo = $this->getModel()->checkModuleVersion(!isset($this->request->post['force']));
+        if (version_compare($versionInfo['version'], $this->moduleVersion) > 0) {
+
+            if (isset($this->request->post['update']) && $this->request->post['update'] == '1') {
+                $fileName = $this->getModel()->downloadLastVersion($versionInfo['tag']);
+                if (!empty($fileName)) {
+                    if ($this->getModel()->createBackup($this->moduleVersion)) {
+                        if ($this->getModel()->unpackLastVersion($fileName)) {
+                            $link = $this->url->link('payment/yamoney/checkVersion', 'token=' . $this->session->data['token'], 'SSL');
+                            $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version'] . ' была успешно загружена и установлена';
+                            $this->redirect($link);
+                        } else {
+                            $this->data['errors'][] = 'Не удалось распаковать загруженный архив ' . $fileName . ', подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                        }
+                    } else {
+                        $this->data['errors'][] = 'Не удалось создать бэкап установленной версии модуля, подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                    }
+                } else {
+                    $this->data['errors'][] = 'Не удалось загрузить архив с новой версией, подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                }
+            }
+
             $this->data['new_version_available'] = true;
-            $this->data['changelog'] = $this->getModel()->getChangeLog($this->moduleVersion, $version);
-            $this->data['newVersion'] = $version;
+            $this->data['changelog'] = $this->getModel()->getChangeLog($this->moduleVersion, $versionInfo['version']);
+            $this->data['newVersion'] = $versionInfo['version'];
         } else {
             $this->data['new_version_available'] = false;
             $this->data['changelog'] = '';
             $this->data['newVersion'] = $this->moduleVersion;
         }
         $this->data['currentVersion'] = $this->moduleVersion;
+        $this->data['newVersionInfo'] = $versionInfo;
 
         $this->template = 'payment/yamoney/check_module_version.tpl';
         $this->children = array(

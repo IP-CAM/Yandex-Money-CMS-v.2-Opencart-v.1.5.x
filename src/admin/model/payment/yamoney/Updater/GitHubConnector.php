@@ -102,19 +102,23 @@ class GitHubConnector
             return null;
         }
 
-        curl_setopt_array($curl, array(
+        $options = array(
             CURLOPT_URL => 'https://raw.githubusercontent.com/' . $repository . '/' . $branch . '/' . $fileName,
             CURLOPT_RETURNTRANSFER => false,
             CURLOPT_FILE => $file,
             CURLOPT_HEADER => false,
-            CURLOPT_BINARYTRANSFER => true,
             CURLOPT_HTTPHEADER => $this->getRequestHeaders($repository . '/blob/' . $branch . '/' . $fileName),
+            CURLOPT_BINARYTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 5,
             CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_ACCEPT_ENCODING => true,
-        ));
+        );
+        if (defined('CURLOPT_ACCEPT_ENCODING')) {
+            $options[CURLOPT_ACCEPT_ENCODING] = true;
+        }
+
+        curl_setopt_array($curl, $options);
 
         $result = curl_exec($curl);
         fclose($file);
@@ -173,6 +177,7 @@ class GitHubConnector
         ));
 
         $result = curl_exec($curl);
+        var_dump($result);
         fclose($file);
         if (empty($result)) {
             return null;
@@ -278,14 +283,16 @@ class GitHubConnector
      * Возвращает массив заголовков для отправки в HTTP запросе
      *
      * @param string $referrer URL источника запроса для отправки в заголовке Referer
+     * @param bool $deflateOnly
      *
      * @return array Массив заголовков для передачи
      */
     private function getRequestHeaders($referrer)
     {
+        $deflateOnly = !defined('CURLOPT_ACCEPT_ENCODING');
         return array(
             'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Encoding: gzip,deflate,br',
+            'Accept-Encoding: ' . ($deflateOnly ? 'deflate' : 'gzip,deflate,br'),
             'Accept-Language: ru,en;q=0.8',
             'Cache-Control: max-age=0',
             'Connection: close',

@@ -9,6 +9,10 @@ class ModelPaymentYaMoney extends Model
      */
     private $config;
 
+    private $backupDirectory = 'yamodule/backup';
+    private $versionDirectory = 'yamodule/updates';
+    private $downloadDirectory = 'yamodule';
+
     public function init($config)
     {
         $this->config = $config;
@@ -136,16 +140,30 @@ class ModelPaymentYaMoney extends Model
         $dir = $version . '-' . time();
         $fileName = $dir . '-' . uniqid() . '.zip';
 
-        $fileName = DIR_DOWNLOAD . '/update_module/' . $fileName;
-        $archive = new \YandexMoney\Updater\Archive\BackupZip($fileName, $dir);
-        $archive->backup($root);
+        $dir = DIR_DOWNLOAD . '/' . $this->backupDirectory;
+        if (!file_exists($dir)) {
+            if (!mkdir($dir)) {
+                $this->log('error', 'Failed to create backup directory: ' . $dir);
+                return false;
+            }
+        }
+
+        try {
+            $fileName = $dir . '/' . $fileName;
+            $archive = new \YandexMoney\Updater\Archive\BackupZip($fileName, $dir);
+            $archive->backup($root);
+        } catch (Exception $e) {
+            $this->log('error', 'Failed to create backup: ' . $e->getMessage());
+            return false;
+        }
+        return true;
     }
 
     public function restoreBackup($fileName)
     {
         $this->loadClasses();
 
-        $fileName = DIR_DOWNLOAD . '/update_module/' . $fileName;
+        $fileName = DIR_DOWNLOAD . '/' . $this->backupDirectory . '/' . $fileName;
         if (!file_exists($fileName)) {
             $this->log('error', 'File "' . $fileName . '" not exists');
             return false;
@@ -167,7 +185,7 @@ class ModelPaymentYaMoney extends Model
 
     public function removeBackup($fileName)
     {
-        $fileName = DIR_DOWNLOAD . '/update_module/' . str_replace(array('/', '\\'), array('', ''), $fileName);
+        $fileName = DIR_DOWNLOAD . '/' . $this->backupDirectory . '/' . str_replace(array('/', '\\'), array('', ''), $fileName);
         if (!file_exists($fileName)) {
             $this->log('error', 'File "' . $fileName . '" not exists');
             return false;
@@ -180,41 +198,119 @@ class ModelPaymentYaMoney extends Model
         return true;
     }
 
-    public function checkModuleVersion()
+    public function checkModuleVersion($useCache = true)
     {
         $this->loadClasses();
 
+        $file = DIR_DOWNLOAD . '/' . $this->downloadDirectory . '/version_log.txt';
+        if ($useCache) {
+            if (file_exists($file)) {
+                $content = preg_replace('/\s+/', '', file_get_contents($file));
+                if (!empty($content)) {
+                    $parts = explode(':', $content);
+                    if (count($parts) === 2) {
+                        if (time() - $parts[1] < 3600 * 8) {
+                            return array(
+                                'tag'     => $parts[0],
+                                'version' => preg_replace('/[^\d\.]+/', '', $parts[0]),
+                                'time'    => $parts[1],
+                                'date'    => $this->dateDiffToString($parts[1]),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
         $connector = new GitHubConnector();
-        return $connector->getLatestRelease('actofgod/oc15-sdk-test');
+        $version = $connector->getLatestRelease('actofgod/oc15-sdk-test');
+        if (empty($version)) {
+            return array();
+        }
+
+        $cache = $version . ':' . time();
+        file_put_contents($file, $cache);
+
+        return array(
+            'tag'     => $version,
+            'version' => preg_replace('/[^\d\.]+/', '', $version),
+            'time'    => time(),
+            'date'    => $this->dateDiffToString(time()),
+        );
+    }
+
+    public function downloadLastVersion($tag, $useCache = true)
+    {
+        $this->loadClasses();
+
+        $dir = DIR_DOWNLOAD . '/' . $this->versionDirectory;
+        if (!file_exists($dir)) {
+            if (!mkdir($dir)) {
+                $this->log('error', 'Не удалось создать директорию ' . $dir);
+                return false;
+            }
+        } elseif ($useCache) {
+            $fileName = $dir . '/' . $tag . '.zip';
+            if (file_exists($fileName)) {
+                return $fileName;
+            }
+        }
+
+        $connector = new GitHubConnector();
+        $fileName = $connector->downloadRelease('actofgod/oc15-sdk-test', $tag, $dir);
+        if (empty($fileName)) {
+            $this->log('error', 'Не удалось загрузить архив с обновлением');
+            return false;
+        }
+
+        return $fileName;
+    }
+
+    public function unpackLastVersion($fileName)
+    {
+        if (!file_exists($fileName)) {
+            $this->log('error', 'File "' . $fileName . '" not exists');
+            return false;
+        }
+
+        try {
+            $sourceDirectory = dirname(realpath(DIR_CATALOG));
+            $archive = new \YandexMoney\Updater\Archive\RestoreZip($fileName);
+            $archive->restore('opencart.map', $sourceDirectory);
+        } catch (Exception $e) {
+            $this->log('error', $e->getMessage());
+            if ($e->getPrevious() !== null) {
+                $this->log('error', $e->getPrevious()->getMessage());
+            }
+            return false;
+        }
+        return true;
     }
 
     public function getChangeLog($currentVersion, $newVersion)
     {
         $connector = new GitHubConnector();
 
-        $newChangeLog = DIR_DOWNLOAD . '/CHANGELOG-' . $newVersion . '.md';
+        $dir = DIR_DOWNLOAD . '/' . $this->downloadDirectory;
+        $newChangeLog = $dir . '/CHANGELOG-' . $newVersion . '.md';
         if (!file_exists($newChangeLog)) {
-            $fileName = $connector->downloadLatestChangeLog('actofgod/oc15-sdk-test', DIR_DOWNLOAD);
+            $fileName = $connector->downloadLatestChangeLog('actofgod/oc15-sdk-test', $dir);
             if (!empty($fileName)) {
-                rename($fileName, $newChangeLog);
+                rename($dir . '/' . $fileName, $newChangeLog);
             }
         }
 
-        $old = DIR_DOWNLOAD . '/CHANGELOG-' . $currentVersion . '.md';
+        $oldChangeLog = $dir . '/CHANGELOG-' . $currentVersion . '.md';
         if (!file_exists($oldChangeLog)) {
-            $fileName = $connector->downloadLatestChangeLog('actofgod/oc15-sdk-test', DIR_DOWNLOAD);
+            $fileName = $connector->downloadLatestChangeLog('actofgod/oc15-sdk-test', $dir);
             if (!empty($fileName)) {
-                rename($fileName, $newChangeLog);
+                rename($dir . '/' . $fileName, $oldChangeLog);
             }
         }
 
         $result = '';
         if (file_exists($newChangeLog)) {
-            $old = DIR_DOWNLOAD . '/CHANGELOG-' . $currentVersion . '.md';
-            $diff = $connector->diffChangeLog($old, $newChangeLog);
-            if (!empty($diff)) {
-                $result = str_replace(array("\n"), array("<br />\n"), $diff);
-            }
+            $result = $connector->diffChangeLog($oldChangeLog, $newChangeLog);
         }
         return $result;
     }
@@ -250,5 +346,20 @@ class ModelPaymentYaMoney extends Model
             require_once $path . 'Archive/BackupZip.php';
             require_once $path . 'Archive/RestoreZip.php';
         }
+    }
+
+    private function dateDiffToString($timestamp)
+    {
+        $diff = time() - $timestamp;
+        if ($diff < 60) {
+            return 'только что';
+        } elseif ($diff < 120) {
+            return 'минуту назад';
+        } elseif ($diff < 180) {
+            return 'две минуты назад';
+        } elseif ($diff < 300) {
+            return 'пару минут назад';
+        }
+        return date('d.m.Y H:i:s', $timestamp);
     }
 }
