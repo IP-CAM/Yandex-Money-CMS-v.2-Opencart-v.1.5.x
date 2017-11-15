@@ -138,8 +138,8 @@ class ModelPaymentYaMoney extends Model
         $reader = new \YandexMoney\Updater\ProjectStructure\ProjectStructureReader();
         $root = $reader->readFile(dirname(__FILE__) . '/yamoney/opencart.map', $sourceDirectory);
 
-        $dir = $version . '-' . time();
-        $fileName = $dir . '-' . uniqid() . '.zip';
+        $rootDir = $version . '-' . time();
+        $fileName = $rootDir . '-' . uniqid() . '.zip';
 
         $dir = DIR_DOWNLOAD . '/' . $this->backupDirectory;
         if (!file_exists($dir)) {
@@ -151,7 +151,7 @@ class ModelPaymentYaMoney extends Model
 
         try {
             $fileName = $dir . '/' . $fileName;
-            $archive = new \YandexMoney\Updater\Archive\BackupZip($fileName, $dir);
+            $archive = new \YandexMoney\Updater\Archive\BackupZip($fileName, $rootDir);
             $archive->backup($root);
         } catch (Exception $e) {
             $this->log('error', 'Failed to create backup: ' . $e->getMessage());

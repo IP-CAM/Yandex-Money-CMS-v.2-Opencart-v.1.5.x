@@ -177,7 +177,6 @@ class GitHubConnector
         ));
 
         $result = curl_exec($curl);
-        var_dump($result);
         fclose($file);
         if (empty($result)) {
             return null;

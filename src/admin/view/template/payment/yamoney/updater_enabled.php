@@ -34,8 +34,12 @@
 
                 <h4>История изменений:</h4>
                 <p><?php echo $changelog; ?></p>
+                <form method="post" id="update-form" action="<?php echo $update_action; ?>&type=update">
+                    <input name="update" value="1" type="hidden" />
+                    <input name="version" value="<?php echo htmlspecialchars($newVersion) ?>" type="hidden" />
+                </form>
                 <button type="button" id="update-module" class="btn btn-primary">Обновить модуль</button>
-                <form method="post" id="update-form" action="<?php echo $update_action; ?>">
+                <form method="post" id="update-form" action="<?php echo $update_action; ?>&type=update">
                     <input name="update" value="1" type="hidden" />
                     <input name="version" value="<?php echo htmlspecialchars($newVersion) ?>" type="hidden" />
                 </form>
@@ -44,7 +48,7 @@
                 <p>Установлена последняя версия модуля.</p>
             <?php endif; ?>
 
-            <form method="post" id="check-version" action="<?php echo $update_action; ?>">
+            <form method="post" id="check-version" action="<?php echo $update_action; ?>&type=check">
                 <input name="force" value="1" type="hidden" />
             </form>
         </div>

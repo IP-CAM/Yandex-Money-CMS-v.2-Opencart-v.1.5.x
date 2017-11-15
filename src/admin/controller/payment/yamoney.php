@@ -21,7 +21,7 @@ class ControllerPaymentYaMoney extends Controller
     /**
      * @var string
      */
-    private $moduleVersion = '1.0.3';
+    private $moduleVersion = '1.0.4';
 
     /**
      * @var ModelPaymentYaMoney
@@ -173,6 +173,7 @@ class ControllerPaymentYaMoney extends Controller
         }
 
         if (!empty($this->request->post['action'])) {
+            $logs = $this->url->link('payment/yamoney/logs', 'token=' . $this->session->data['token'], 'SSL');
             switch ($this->request->post['action']) {
                 case 'restore';
                     if (!empty($this->request->post['file_name'])) {
@@ -180,7 +181,7 @@ class ControllerPaymentYaMoney extends Controller
                             $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version'] . ' была успешно восстановлена из бэкапа ' . $this->request->post['file_name'];
                             $this->redirect($link);
                         }
-                        $this->data['errors'][] = 'Не удалось восстановить данные из бэкапа, подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                        $this->data['errors'][] = 'Не удалось восстановить данные из бэкапа, подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
                     }
                     break;
                 case 'remove':
@@ -189,7 +190,7 @@ class ControllerPaymentYaMoney extends Controller
                             $this->session->data['flash_message'] = 'Бэкап ' . $this->request->post['file_name'] . ' был успешно удалён';
                             $this->redirect($link);
                         }
-                        $this->data['errors'][] = 'Не удалось удалить бэкап ' . $this->request->post['file_name'] . ', подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                        $this->data['errors'][] = 'Не удалось удалить бэкап ' . $this->request->post['file_name'] . ', подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
                     }
                     break;
             }
@@ -218,8 +219,11 @@ class ControllerPaymentYaMoney extends Controller
             $this->redirect($link);
         }
 
+        $versionInfo = $this->applyVersionInfo();
+
         if (isset($this->request->post['update']) && $this->request->post['update'] == '1') {
             $fileName = $this->getModel()->downloadLastVersion($versionInfo['tag']);
+            $logs = $this->url->link('payment/yamoney/logs', 'token=' . $this->session->data['token'], 'SSL');
             if (!empty($fileName)) {
                 if ($this->getModel()->createBackup($this->moduleVersion)) {
                     if ($this->getModel()->unpackLastVersion($fileName)) {
@@ -229,14 +233,12 @@ class ControllerPaymentYaMoney extends Controller
                         $this->data['errors'][] = 'Не удалось распаковать загруженный архив ' . $fileName . ', подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
                     }
                 } else {
-                    $this->data['errors'][] = 'Не удалось создать бэкап установленной версии модуля, подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                    $this->data['errors'][] = 'Не удалось создать бэкап установленной версии модуля, подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
                 }
             } else {
-                $this->data['errors'][] = 'Не удалось загрузить архив с новой версией, подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                $this->data['errors'][] = 'Не удалось загрузить архив с новой версией, подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
             }
         }
-
-        $this->applyVersionInfo();
 
         $this->template = 'payment/yamoney/check_module_version.tpl';
         $this->children = array(
@@ -453,7 +455,7 @@ class ControllerPaymentYaMoney extends Controller
     private function applyVersionInfo($force = false)
     {
         if (!$this->config->get('ya_updater_enable')) {
-            return;
+            return array();
         }
 
         $versionInfo = $this->getModel()->checkModuleVersion($force);
@@ -468,6 +470,8 @@ class ControllerPaymentYaMoney extends Controller
         }
         $this->data['currentVersion'] = $this->moduleVersion;
         $this->data['newVersionInfo'] = $versionInfo;
+
+        return $versionInfo;
     }
 
     private function applyBackups()
