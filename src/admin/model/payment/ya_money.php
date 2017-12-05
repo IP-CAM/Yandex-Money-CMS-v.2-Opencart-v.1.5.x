@@ -22,6 +22,8 @@ class ModelPaymentYaMoney extends Model
 
     public function install()
     {
+        $this->preventDirectories();
+
         $this->log('info', 'install ya_money module');
         $this->db->query('
             CREATE TABLE IF NOT EXISTS `' . DB_PREFIX . 'ya_money_payment` (
@@ -103,11 +105,17 @@ class ModelPaymentYaMoney extends Model
         return $methods[0];
     }
 
+    /**
+     * Возвращает список имеющихся бэкапов
+     * @return array Список бэкапов
+     */
     public function getBackupList()
     {
         $result = array();
 
+        $this->preventDirectories();
         $dir = DIR_DOWNLOAD . '/' . $this->backupDirectory;
+
         $handle = opendir($dir);
         while (($entry = readdir($handle)) !== false) {
             if ($entry === '.' || $entry === '..') {
@@ -130,16 +138,22 @@ class ModelPaymentYaMoney extends Model
         return $result;
     }
 
+    /**
+     * Создаёт новый быкап установленного в данный момент модуля
+     * @param string $version Текущая версия придожения
+     * @return bool True если бэкап был создан, false если произошла ошибка
+     */
     public function createBackup($version)
     {
         $this->loadClasses();
+        $this->preventDirectories();
 
         $sourceDirectory = dirname(realpath(DIR_CATALOG));
         $reader = new \YandexMoney\Updater\ProjectStructure\ProjectStructureReader();
         $root = $reader->readFile(dirname(__FILE__) . '/yamoney/opencart.map', $sourceDirectory);
 
         $rootDir = $version . '-' . time();
-        $fileName = $rootDir . '-' . uniqid() . '.zip';
+        $fileName = $rootDir . '-' . uniqid('', true) . '.zip';
 
         $dir = DIR_DOWNLOAD . '/' . $this->backupDirectory;
         if (!file_exists($dir)) {
@@ -160,9 +174,15 @@ class ModelPaymentYaMoney extends Model
         return true;
     }
 
+    /**
+     * Восстанавливает бэкап
+     * @param string $fileName Имя файла бэкапа
+     * @return bool True если файлы из быкапа были восстановлены, false если нет
+     */
     public function restoreBackup($fileName)
     {
         $this->loadClasses();
+        $this->preventDirectories();
 
         $fileName = DIR_DOWNLOAD . '/' . $this->backupDirectory . '/' . $fileName;
         if (!file_exists($fileName)) {
@@ -184,8 +204,15 @@ class ModelPaymentYaMoney extends Model
         return true;
     }
 
+    /**
+     * Удаляет файл бэкапа
+     * @param string $fileName Имя файла бэкапа
+     * @return bool True если бэкап был удалён, false если произошла ошибка
+     */
     public function removeBackup($fileName)
     {
+        $this->preventDirectories();
+
         $fileName = DIR_DOWNLOAD . '/' . $this->backupDirectory . '/' . str_replace(array('/', '\\'), array('', ''), $fileName);
         if (!file_exists($fileName)) {
             $this->log('error', 'File "' . $fileName . '" not exists');
@@ -199,11 +226,18 @@ class ModelPaymentYaMoney extends Model
         return true;
     }
 
+    /**
+     * Проверяет и возвращает последнюю версию модуля на гитхабе
+     * @param bool $useCache Использовать ли кэш
+     * @return array Массив с информацией о версии модуля на гитхабе или пустой массив, если данные получить не удалось
+     */
     public function checkModuleVersion($useCache = true)
     {
         $this->loadClasses();
+        $this->preventDirectories();
 
         $file = DIR_DOWNLOAD . '/' . $this->downloadDirectory . '/version_log.txt';
+
         if ($useCache) {
             if (file_exists($file)) {
                 $content = preg_replace('/\s+/', '', file_get_contents($file));
@@ -240,9 +274,16 @@ class ModelPaymentYaMoney extends Model
         );
     }
 
+    /**
+     * Загружает последнюю версию из гитхаба
+     * @param string $tag Имя тега версии
+     * @param bool $useCache True если не требуется загружать файл, если он уже имеется
+     * @return string|bool Имя файла бэкапа или false если не удалось получить данные из репозитория
+     */
     public function downloadLastVersion($tag, $useCache = true)
     {
         $this->loadClasses();
+        $this->preventDirectories();
 
         $dir = DIR_DOWNLOAD . '/' . $this->versionDirectory;
         if (!file_exists($dir)) {
@@ -267,8 +308,15 @@ class ModelPaymentYaMoney extends Model
         return $fileName;
     }
 
+    /**
+     * Распаковывает и устанавливает новую версию модуля
+     * @param string $fileName Имя файла архива
+     * @return bool True если все ок, false если произошла ошибка
+     */
     public function unpackLastVersion($fileName)
     {
+        $this->loadClasses();
+
         if (!file_exists($fileName)) {
             $this->log('error', 'File "' . $fileName . '" not exists');
             return false;
@@ -288,8 +336,16 @@ class ModelPaymentYaMoney extends Model
         return true;
     }
 
+    /**
+     * Возвращает лог изменений
+     * @param string $currentVersion Текущая версия модуля
+     * @param string $newVersion Новая версия модуля
+     * @return string Логи изменений
+     */
     public function getChangeLog($currentVersion, $newVersion)
     {
+        $this->loadClasses();
+
         $connector = new GitHubConnector();
 
         $dir = DIR_DOWNLOAD . '/' . $this->downloadDirectory;
@@ -362,5 +418,32 @@ class ModelPaymentYaMoney extends Model
             return 'пару минут назад';
         }
         return date('d.m.Y H:i:s', $timestamp);
+    }
+
+    private function preventDirectories()
+    {
+        $this->checkDirectory(DIR_DOWNLOAD . '/' . $this->downloadDirectory);
+        $this->checkDirectory(DIR_DOWNLOAD . '/' . $this->backupDirectory);
+        $this->checkDirectory(DIR_DOWNLOAD . '/' . $this->versionDirectory);
+    }
+
+    private function checkDirectory($directoryName)
+    {
+        if (!file_exists($directoryName)) {
+            mkdir($directoryName);
+        }
+        if (!is_dir($directoryName)) {
+            throw new RuntimeException('Invalid configuration: "' . $directoryName . '" is not directory');
+        }
+        $this->checkFile($directoryName, 'index.php');
+        $this->checkFile($directoryName, '.htaccess');
+    }
+
+    private function checkFile($directoryName, $fileName)
+    {
+        $testFile = $directoryName . '/' . $fileName;
+        if (!file_exists($testFile)) {
+            copy(dirname(__FILE__) . '/yamoney/' . $fileName, $testFile);
+        }
     }
 }

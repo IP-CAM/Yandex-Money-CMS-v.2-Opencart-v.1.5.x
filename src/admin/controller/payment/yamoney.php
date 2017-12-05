@@ -21,7 +21,7 @@ class ControllerPaymentYaMoney extends Controller
     /**
      * @var string
      */
-    private $moduleVersion = '1.0.4';
+    private $moduleVersion = '1.0.1';
 
     /**
      * @var ModelPaymentYaMoney
@@ -86,7 +86,12 @@ class ControllerPaymentYaMoney extends Controller
         $this->data['tax_classes'] = $this->getValidTaxRateList();
         $this->data['pages_mpos'] = $this->getCatalogPages();
 
-        $this->data['ya_updater_enable'] = $this->config->get('ya_updater_enable');
+        $this->data['ya_zip_exists'] = function_exists('zip_open');
+        if ($this->data['ya_zip_exists']) {
+            $this->data['ya_updater_enable'] = $this->config->get('ya_updater_enable');
+        } else {
+            $this->data['ya_updater_enable'] = false;
+        }
         $this->applyVersionInfo();
         $this->applyBackups();
         $this->data['update_action'] = $this->url->link('payment/yamoney/checkVersion', 'token=' . $this->session->data['token'], 'SSL');
@@ -178,19 +183,24 @@ class ControllerPaymentYaMoney extends Controller
                 case 'restore';
                     if (!empty($this->request->post['file_name'])) {
                         if ($this->getModel()->restoreBackup($this->request->post['file_name'])) {
-                            $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version'] . ' была успешно восстановлена из бэкапа ' . $this->request->post['file_name'];
+                            $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version']
+                                . ' была успешно восстановлена из бэкапа ' . $this->request->post['file_name'];
                             $this->redirect($link);
                         }
-                        $this->data['errors'][] = 'Не удалось восстановить данные из бэкапа, подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
+                        $this->data['errors'][] = 'Не удалось восстановить данные из бэкапа, подробную информацию '
+                            . 'о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
                     }
                     break;
                 case 'remove':
                     if (!empty($this->request->post['file_name'])) {
                         if ($this->getModel()->removeBackup($this->request->post['file_name'])) {
-                            $this->session->data['flash_message'] = 'Бэкап ' . $this->request->post['file_name'] . ' был успешно удалён';
+                            $this->session->data['flash_message'] = 'Бэкап ' . $this->request->post['file_name']
+                                . ' был успешно удалён';
                             $this->redirect($link);
                         }
-                        $this->data['errors'][] = 'Не удалось удалить бэкап ' . $this->request->post['file_name'] . ', подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
+                        $this->data['errors'][] = 'Не удалось удалить бэкап ' . $this->request->post['file_name']
+                            . ', подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs
+                            . '">логах модуля</a>';
                     }
                     break;
             }
@@ -227,16 +237,20 @@ class ControllerPaymentYaMoney extends Controller
             if (!empty($fileName)) {
                 if ($this->getModel()->createBackup($this->moduleVersion)) {
                     if ($this->getModel()->unpackLastVersion($fileName)) {
-                        $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version'] . ' была успешно загружена и установлена';
+                        $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version']
+                            . ' была успешно загружена и установлена';
                         $this->redirect($link);
                     } else {
-                        $this->data['errors'][] = 'Не удалось распаковать загруженный архив ' . $fileName . ', подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                        $this->data['errors'][] = 'Не удалось распаковать загруженный архив ' . $fileName
+                            . ', подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
                     }
                 } else {
-                    $this->data['errors'][] = 'Не удалось создать бэкап установленной версии модуля, подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
+                    $this->data['errors'][] = 'Не удалось создать бэкап установленной версии модуля, подробную '
+                        . 'информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
                 }
             } else {
-                $this->data['errors'][] = 'Не удалось загрузить архив с новой версией, подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
+                $this->data['errors'][] = 'Не удалось загрузить архив с новой версией, подробную информацию о '
+                    . 'произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
             }
         }
 
@@ -454,10 +468,6 @@ class ControllerPaymentYaMoney extends Controller
 
     private function applyVersionInfo($force = false)
     {
-        if (!$this->config->get('ya_updater_enable')) {
-            return array();
-        }
-
         $versionInfo = $this->getModel()->checkModuleVersion($force);
         if (version_compare($versionInfo['version'], $this->moduleVersion) > 0) {
             $this->data['new_version_available'] = true;
@@ -476,10 +486,6 @@ class ControllerPaymentYaMoney extends Controller
 
     private function applyBackups()
     {
-        if (!$this->config->get('ya_updater_enable')) {
-            return;
-        }
-
         if (!empty($this->session->data['flash_message'])) {
             $this->data['success'] = $this->session->data['flash_message'];
             unset($this->session->data['flash_message']);
