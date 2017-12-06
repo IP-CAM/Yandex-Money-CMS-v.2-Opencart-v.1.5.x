@@ -2,6 +2,11 @@
 
 require_once dirname(__FILE__) . '/yamoney/autoload.php';
 
+/**
+ * Class ModelPaymentYaMoney
+ *
+ * @property-read Url $url
+ */
 class ModelPaymentYaMoney extends Model
 {
     private $paymentMethods;
@@ -125,8 +130,10 @@ class ModelPaymentYaMoney extends Model
             $paymentType = null;
             $confirmation = array(
                 'type'      => \YaMoney\Model\ConfirmationType::REDIRECT,
-                'returnUrl' => $this->url->link(
-                    'payment/yamoney/confirm', 'order_id=' . $orderInfo['order_id'], 'SSL'
+                'returnUrl' => str_replace(
+                    array('&amp;'),
+                    array('&'),
+                    $this->url->link('payment/yamoney/confirm', 'order_id=' . $orderInfo['order_id'], true)
                 ),
             );
             if (!empty($_GET['paymentType'])) {
@@ -367,8 +374,9 @@ class ModelPaymentYaMoney extends Model
             $builder->setAmount($payment->getAmount());
             $idempotencyKey = $payment->getId();
             $tries = 0;
+            $request = $builder->build();
             do {
-                $result = $client->capturePayment($builder->build(), $payment->getId(), $idempotencyKey);
+                $result = $client->capturePayment($request, $payment->getId(), $idempotencyKey);
                 if ($result === null) {
                     $tries++;
                     if ($tries > 3) {

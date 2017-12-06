@@ -1,7 +1,7 @@
 <?php echo $header; ?>
     <link rel="stylesheet" href="https://yastatic.net/bootstrap/3.3.6/css/bootstrap.min.css">
-    <div id='content' class="container">
-        <div class='row'>
+    <div id="content" class="container">
+        <div class="row">
             <h3 class="form-heading"><?php echo $lang->get('module_settings_header'); ?></h3>
             <div class='col-md-12'>
                 <p><?php echo $lang->get('module_license'); ?></p>
@@ -55,9 +55,31 @@
                 <?php include dirname(__FILE__) . '/yamoney/kassa.php'; ?>
                 <?php include dirname(__FILE__) . '/yamoney/wallet.php'; ?>
                 <?php include dirname(__FILE__) . '/yamoney/billing.php'; ?>
+                <?php if ($zip_enabled && $curl_enabled): ?>
                 <?php include dirname(__FILE__) . '/yamoney/updater.php'; ?>
+                <?php else: ?>
+                <?php include dirname(__FILE__) . '/yamoney/updater_disabled.php'; ?>
+                <?php endif; ?>
             </div> <!-- для tab-контента -->
         </form>
+        <?php if (isset($update_action)) : ?>
+            <?php if (isset($newVersion)) : ?>
+                <form method="post" id="update-form" action="<?php echo $update_action; ?>&type=update">
+                    <input name="update" value="1" type="hidden" />
+                    <input name="version" value="<?php echo htmlspecialchars($newVersion) ?>" type="hidden" />
+                </form>
+            <?php endif; ?>
+            <form method="post" id="check-version" action="<?php echo $update_action; ?>&type=check">
+                <input name="force" value="1" type="hidden" />
+            </form>
+        <?php endif; ?>
+        <?php if (isset($backup_action)) : ?>
+            <form id="action-form" method="post" action="<?php echo $backup_action; ?>">
+                <input type="hidden" name="action" id="action-form-action" value="none" />
+                <input type="hidden" name="file_name" id="action-form-file-name" value="" />
+                <input type="hidden" name="version" id="action-form-version" value="" />
+            </form>
+        <?php endif; ?>
     </div> <!-- есть в footer -->
 <script>
     $(document).ready(function( $ ) {

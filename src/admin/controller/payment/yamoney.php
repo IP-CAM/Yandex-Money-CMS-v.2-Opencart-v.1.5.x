@@ -21,7 +21,7 @@ class ControllerPaymentYaMoney extends Controller
     /**
      * @var string
      */
-    private $moduleVersion = '1.0.1';
+    private $moduleVersion = '1.0.6';
 
     /**
      * @var ModelPaymentYaMoney
@@ -86,16 +86,14 @@ class ControllerPaymentYaMoney extends Controller
         $this->data['tax_classes'] = $this->getValidTaxRateList();
         $this->data['pages_mpos'] = $this->getCatalogPages();
 
-        $this->data['ya_zip_exists'] = function_exists('zip_open');
-        if ($this->data['ya_zip_exists']) {
-            $this->data['ya_updater_enable'] = $this->config->get('ya_updater_enable');
-        } else {
-            $this->data['ya_updater_enable'] = false;
+        $this->data['zip_enabled'] = function_exists('zip_open');
+        $this->data['curl_enabled'] = function_exists('curl_init');
+        if ($this->data['zip_enabled'] && $this->data['curl_enabled']) {
+            $this->applyVersionInfo();
+            $this->applyBackups();
+            $this->data['update_action'] = $this->url->link('payment/yamoney/checkVersion', 'token=' . $this->session->data['token'], true);
+            $this->data['backup_action'] = $this->url->link('payment/yamoney/backups', 'token=' . $this->session->data['token'], true);
         }
-        $this->applyVersionInfo();
-        $this->applyBackups();
-        $this->data['update_action'] = $this->url->link('payment/yamoney/checkVersion', 'token=' . $this->session->data['token'], 'SSL');
-        $this->data['backup_action'] = $this->url->link('payment/yamoney/backups', 'token=' . $this->session->data['token'], 'SSL');
 
         $post = $this->request->post;
         foreach ($this->getModel()->getPaymentMethods() as $method) {
@@ -172,10 +170,6 @@ class ControllerPaymentYaMoney extends Controller
     public function backups()
     {
         $link = $this->url->link('payment/yamoney', 'token=' . $this->session->data['token'], 'SSL');
-        if (!$this->config->get('ya_updater_enable')) {
-            $this->redirect($link);
-            return;
-        }
 
         if (!empty($this->request->post['action'])) {
             $logs = $this->url->link('payment/yamoney/logs', 'token=' . $this->session->data['token'], 'SSL');
@@ -219,10 +213,6 @@ class ControllerPaymentYaMoney extends Controller
     public function checkVersion()
     {
         $link = $this->url->link('payment/yamoney', 'token=' . $this->session->data['token'], 'SSL');
-        if (!$this->config->get('ya_updater_enable')) {
-            $this->redirect($link);
-            return;
-        }
 
         if (isset($this->request->post['force'])) {
             $this->applyVersionInfo(true);
@@ -341,8 +331,6 @@ class ControllerPaymentYaMoney extends Controller
             $settings['ya_money_on'] = '0';
             $settings['ya_billing_enable'] = '0';
         }
-
-        $settings['ya_updater_enable'] = (isset($data['ya_updater_enable']) && $data['ya_updater_enable']);
 
         foreach ($this->getModel()->getPaymentMethods() as $method) {
             foreach ($method->getSettings() as $param) {

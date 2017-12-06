@@ -1,29 +1,22 @@
 <div role="tabpanel" class="tab-pane" id="updater">
-    <div class='row'>
-        <div class='col-md-12'>
+    <div class="row">
+        <div class="col-md-12">
             <h4><?php echo $lang->get('updater_header'); ?></h4>
-            <div class="form-horizontal">
-                <div class="form-group">
-                    <div class="col-sm-9 col-sm-offset-3" style="padding-left: 35px;">
-                        <label class="checkbox" for="ya_updater_enable">
-                            <input type="checkbox" name="ya_updater_enable" id="ya_updater_enable" value="1"
-                                <?php echo ($ya_updater_enable ? 'checked' : ''); ?> />
-                            <?php echo $lang->get('updater_enable'); ?>
-                        </label>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
-    <div class='row'>
-        <div class='col-md-12'>
-            <h4>Версия модуля:</h4>
+    <div class="row">
+        <div class="col-md-12">
+            <p>
+                Здесь будут появляться новые версии модуля — с новыми возможностями или с исправленными ошибками.
+                Чтобы установить новую версию модуля, нажмите кнопку «Обновить».
+            </p>
+            <h4>О модуле:</h4>
             <ul>
-                <li>Установленная версия модуля: <?php echo $currentVersion; ?></li>
-                <li>Последняя доступная версия модуля: <?php echo $newVersion; ?></li>
+                <li>Установленная версия модуля — <?php echo $currentVersion; ?></li>
+                <li>Последняя версия модуля — <?php echo $newVersion; ?></li>
                 <li>
-                    Дата проверки наличия новой версии: <?php echo $newVersionInfo['date'] ?>
+                    Последняя проверка наличия новых версий — <?php echo $newVersionInfo['date'] ?>
                     <?php if (time() - $newVersionInfo['time'] > 300) : ?>
                         <button type="button" class="btn btn-success btn-xs" id="force-check">Проверить наличие обновлений</button>
                     <?php endif; ?>
@@ -35,38 +28,23 @@
                 <h4>История изменений:</h4>
                 <p><?php echo $changelog; ?></p>
 
-                <?php if ($ya_updater_enable) : ?>
-                    <form method="post" id="update-form" action="<?php echo $update_action; ?>&type=update">
-                        <input name="update" value="1" type="hidden" />
-                        <input name="version" value="<?php echo htmlspecialchars($newVersion) ?>" type="hidden" />
-                    </form>
-                    <button type="button" id="update-module" class="btn btn-primary">Обновить модуль</button>
-                    <form method="post" id="update-form" action="<?php echo $update_action; ?>&type=update">
-                        <input name="update" value="1" type="hidden" />
-                        <input name="version" value="<?php echo htmlspecialchars($newVersion) ?>" type="hidden" />
-                    </form>
-                <?php endif; ?>
-
+                <button type="button" id="update-module" class="btn btn-primary">Обновить</button>
             <?php else: ?>
                 <p>Установлена последняя версия модуля.</p>
             <?php endif; ?>
-
-            <form method="post" id="check-version" action="<?php echo $update_action; ?>&type=check">
-                <input name="force" value="1" type="hidden" />
-            </form>
         </div>
     </div>
 
     <?php if (!empty($backups)) : ?>
         <div class="row">
-            <h4>Бэкапы модуля</h4>
+            <h4>Резервные копии</h4>
             <table class="table table-striped table-hover">
                 <thead>
                 <tr>
                     <th>Версия модуля</th>
                     <th>Дата создания</th>
                     <th>Имя файла</th>
-                    <th>Размер файла бэкапа</th>
+                    <th>Размер файла</th>
                     <th>&nbsp;</th>
                 </tr>
                 </thead>
@@ -85,12 +63,6 @@
                 <?php endforeach; ?>
                 </tbody>
             </table>
-
-            <form id="action-form" method="post" action="<?php echo $backup_action; ?>">
-                <input type="hidden" name="action" id="action-form-action" value="none" />
-                <input type="hidden" name="file_name" id="action-form-file-name" value="" />
-                <input type="hidden" name="version" id="action-form-version" value="" />
-            </form>
         </div>
     <?php endif; ?>
 
