@@ -21,7 +21,7 @@ class ControllerPaymentYaMoney extends Controller
     /**
      * @var string
      */
-    private $moduleVersion = '1.0.6';
+    private $moduleVersion = '1.0.7';
 
     /**
      * @var ModelPaymentYaMoney
@@ -177,24 +177,19 @@ class ControllerPaymentYaMoney extends Controller
                 case 'restore';
                     if (!empty($this->request->post['file_name'])) {
                         if ($this->getModel()->restoreBackup($this->request->post['file_name'])) {
-                            $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version']
-                                . ' была успешно восстановлена из бэкапа ' . $this->request->post['file_name'];
+                            $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version'] . ' была успешно восстановлена из бэкапа ' . $this->request->post['file_name'];
                             $this->redirect($link);
                         }
-                        $this->data['errors'][] = 'Не удалось восстановить данные из бэкапа, подробную информацию '
-                            . 'о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
+                        $this->data['errors'][] = 'Не удалось восстановить данные из бэкапа, подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
                     }
                     break;
                 case 'remove':
                     if (!empty($this->request->post['file_name'])) {
                         if ($this->getModel()->removeBackup($this->request->post['file_name'])) {
-                            $this->session->data['flash_message'] = 'Бэкап ' . $this->request->post['file_name']
-                                . ' был успешно удалён';
+                            $this->session->data['flash_message'] = 'Бэкап ' . $this->request->post['file_name'] . ' был успешно удалён';
                             $this->redirect($link);
                         }
-                        $this->data['errors'][] = 'Не удалось удалить бэкап ' . $this->request->post['file_name']
-                            . ', подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs
-                            . '">логах модуля</a>';
+                        $this->data['errors'][] = 'Не удалось удалить бэкап ' . $this->request->post['file_name'] . ', подробную информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
                     }
                     break;
             }
@@ -227,20 +222,16 @@ class ControllerPaymentYaMoney extends Controller
             if (!empty($fileName)) {
                 if ($this->getModel()->createBackup($this->moduleVersion)) {
                     if ($this->getModel()->unpackLastVersion($fileName)) {
-                        $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version']
-                            . ' была успешно загружена и установлена';
+                        $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version'] . ' была успешно загружена и установлена';
                         $this->redirect($link);
                     } else {
-                        $this->data['errors'][] = 'Не удалось распаковать загруженный архив ' . $fileName
-                            . ', подробную информацию о произошедшей ошибке можно найти в <a href="">логах модуля</a>';
+                        $this->data['errors'][] = 'Не удалось распаковать загруженный архив ' . $fileName . '. Подробная информация об ошибке — в <a href="">логах модуля</a>';
                     }
                 } else {
-                    $this->data['errors'][] = 'Не удалось создать бэкап установленной версии модуля, подробную '
-                        . 'информацию о произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
+                    $this->data['errors'][] = 'Не удалось создать бэкап установленной версии модуля. Подробная информация об ошибке — в <a href="' . $logs . '">логах модуля</a>';
                 }
             } else {
-                $this->data['errors'][] = 'Не удалось загрузить архив с новой версией, подробную информацию о '
-                    . 'произошедшей ошибке можно найти в <a href="' . $logs . '">логах модуля</a>';
+                $this->data['errors'][] = 'Не удалось загрузить архив, попробуйте еще раз. Подробная информация об ошибке — в <a href="' . $logs . '">логах модуля</a>';
             }
         }
 

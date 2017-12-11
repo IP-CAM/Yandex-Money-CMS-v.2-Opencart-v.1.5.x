@@ -1,12 +1,6 @@
 <div role="tabpanel" class="tab-pane" id="updater">
     <div class="row">
         <div class="col-md-12">
-            <h4><?php echo $lang->get('updater_header'); ?></h4>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-12">
             <p>
                 Здесь будут появляться новые версии модуля — с новыми возможностями или с исправленными ошибками.
                 Чтобы установить новую версию модуля, нажмите кнопку «Обновить».

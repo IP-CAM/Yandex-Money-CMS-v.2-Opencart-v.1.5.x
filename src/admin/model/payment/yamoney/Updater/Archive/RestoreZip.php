@@ -186,7 +186,7 @@ class RestoreZip
             $this->prepareDirectory($fileName);
         } else {
             $tmp = $this->zip->getFromIndex($index);
-            $out = fopen($fileName, 'wb');
+            $out = @fopen($fileName, 'wb');
             if (!$out) {
                 throw new RuntimeException('Failed to create or open file "' . $fileName . '"');
             }
@@ -221,7 +221,7 @@ class RestoreZip
         } else {
             $this->prepareDirectory(dirname($filePath));
         }
-        $out = fopen($filePath, 'wb');
+        $out = @fopen($filePath, 'wb');
         if (!$out) {
             throw new RuntimeException('Failed to open file "' . $filePath . '"');
         }

@@ -1,19 +1,17 @@
-# yandexmoney-opencart
+# yandex-money-cms-v2-opencart15
 
 С помощью модуля можно настроить прием платежей через Яндекс.Кассу
 
-// @todo поставить ссылку на нужную инструкцию
-
-[Инструкция по настройке]()
+[Инструкция по настройке](https://kassa.yandex.ru/manuals/opencart1.5)
 
 ### Требования к CMS OpenCart:
 * версия 1.5.4 - 1.5.6;
 
 ### Совместимость с CMS Opencart 2.1.x - 2.2.x
-Данный модуль совместим только с CMS Opencart версии 1.5.x. Для CMS Opencart 2.1.x - 2.2.x нами разработан универсальный модуль, который можно [загрузить здесь](https://github.com/yandex-money/yandex-money-cms-opencart2).
+Данный модуль совместим только с CMS Opencart версии 1.5.x. Для CMS Opencart 2.1.x - 2.2.x нами разработан универсальный модуль, который можно [загрузить здесь](https://github.com/yandex-money/yandex-money-ycms-v2-opencart).
 
 ### Совместимость с CMS Opencart 2.3.x
-Для CMS Opencart 2.3.x нами разработан универсальный модуль, который можно [загрузить здесь](https://github.com/yandex-money/yandex-money-cms-opencart2/tree/oc23x).
+Для CMS Opencart 2.3.x нами разработан универсальный модуль, который можно [загрузить здесь](https://github.com/yandex-money/yandex-money-ycms-v2-opencart).
 
 ### О Кассе
 Сервис, который позволяет включить прием платежей на сайте.

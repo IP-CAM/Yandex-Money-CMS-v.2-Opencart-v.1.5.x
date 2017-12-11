@@ -105,10 +105,6 @@ class ModelPaymentYaMoney extends Model
         return $methods[0];
     }
 
-    /**
-     * Возвращает список имеющихся бэкапов
-     * @return array Список бэкапов
-     */
     public function getBackupList()
     {
         $result = array();
@@ -138,11 +134,6 @@ class ModelPaymentYaMoney extends Model
         return $result;
     }
 
-    /**
-     * Создаёт новый быкап установленного в данный момент модуля
-     * @param string $version Текущая версия придожения
-     * @return bool True если бэкап был создан, false если произошла ошибка
-     */
     public function createBackup($version)
     {
         $this->loadClasses();
@@ -174,11 +165,6 @@ class ModelPaymentYaMoney extends Model
         return true;
     }
 
-    /**
-     * Восстанавливает бэкап
-     * @param string $fileName Имя файла бэкапа
-     * @return bool True если файлы из быкапа были восстановлены, false если нет
-     */
     public function restoreBackup($fileName)
     {
         $this->loadClasses();
@@ -204,11 +190,6 @@ class ModelPaymentYaMoney extends Model
         return true;
     }
 
-    /**
-     * Удаляет файл бэкапа
-     * @param string $fileName Имя файла бэкапа
-     * @return bool True если бэкап был удалён, false если произошла ошибка
-     */
     public function removeBackup($fileName)
     {
         $this->preventDirectories();
@@ -226,11 +207,6 @@ class ModelPaymentYaMoney extends Model
         return true;
     }
 
-    /**
-     * Проверяет и возвращает последнюю версию модуля на гитхабе
-     * @param bool $useCache Использовать ли кэш
-     * @return array Массив с информацией о версии модуля на гитхабе или пустой массив, если данные получить не удалось
-     */
     public function checkModuleVersion($useCache = true)
     {
         $this->loadClasses();
@@ -274,12 +250,6 @@ class ModelPaymentYaMoney extends Model
         );
     }
 
-    /**
-     * Загружает последнюю версию из гитхаба
-     * @param string $tag Имя тега версии
-     * @param bool $useCache True если не требуется загружать файл, если он уже имеется
-     * @return string|bool Имя файла бэкапа или false если не удалось получить данные из репозитория
-     */
     public function downloadLastVersion($tag, $useCache = true)
     {
         $this->loadClasses();
@@ -308,15 +278,8 @@ class ModelPaymentYaMoney extends Model
         return $fileName;
     }
 
-    /**
-     * Распаковывает и устанавливает новую версию модуля
-     * @param string $fileName Имя файла архива
-     * @return bool True если все ок, false если произошла ошибка
-     */
     public function unpackLastVersion($fileName)
     {
-        $this->loadClasses();
-
         if (!file_exists($fileName)) {
             $this->log('error', 'File "' . $fileName . '" not exists');
             return false;
@@ -336,16 +299,8 @@ class ModelPaymentYaMoney extends Model
         return true;
     }
 
-    /**
-     * Возвращает лог изменений
-     * @param string $currentVersion Текущая версия модуля
-     * @param string $newVersion Новая версия модуля
-     * @return string Логи изменений
-     */
     public function getChangeLog($currentVersion, $newVersion)
     {
-        $this->loadClasses();
-
         $connector = new GitHubConnector();
 
         $dir = DIR_DOWNLOAD . '/' . $this->downloadDirectory;
@@ -407,6 +362,7 @@ class ModelPaymentYaMoney extends Model
 
     private function dateDiffToString($timestamp)
     {
+        /*
         $diff = time() - $timestamp;
         if ($diff < 60) {
             return 'только что';
@@ -417,7 +373,8 @@ class ModelPaymentYaMoney extends Model
         } elseif ($diff < 300) {
             return 'пару минут назад';
         }
-        return date('d.m.Y H:i:s', $timestamp);
+        */
+        return date('d.m.Y H:i', $timestamp);
     }
 
     private function preventDirectories()
