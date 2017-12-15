@@ -21,7 +21,7 @@ class ControllerPaymentYaMoney extends Controller
     /**
      * @var string
      */
-    private $moduleVersion = '1.0.7';
+    private $moduleVersion = '1.0.8';
 
     /**
      * @var ModelPaymentYaMoney
@@ -225,7 +225,7 @@ class ControllerPaymentYaMoney extends Controller
                         $this->session->data['flash_message'] = 'Версия модуля ' . $this->request->post['version'] . ' была успешно загружена и установлена';
                         $this->redirect($link);
                     } else {
-                        $this->data['errors'][] = 'Не удалось распаковать загруженный архив ' . $fileName . '. Подробная информация об ошибке — в <a href="">логах модуля</a>';
+                        $this->data['errors'][] = 'Не удалось распаковать загруженный архив ' . $fileName . '. Подробная информация об ошибке — в <a href="' . $logs . '">логах модуля</a>';
                     }
                 } else {
                     $this->data['errors'][] = 'Не удалось создать бэкап установленной версии модуля. Подробная информация об ошибке — в <a href="' . $logs . '">логах модуля</a>';

@@ -56,7 +56,7 @@ class ControllerPaymentYaMoney extends Controller
             if (empty($paymentType)) {
                 $this->jsonError('Не указан способ оплаты');
             } elseif (!$paymentMethod->isPaymentMethodEnabled($paymentType)) {
-                $this->jsonError('Указан неверный способ оплаты: ' . $paymentType);
+                $this->jsonError('Указан неверный способ оплаты');
             } elseif ($paymentType === \YaMoney\Model\PaymentMethodType::QIWI) {
                 $phone = isset($_GET['qiwiPhone']) ? preg_replace('/[^\d]/', '', $_GET['qiwiPhone']) : '';
                 if (empty($phone)) {

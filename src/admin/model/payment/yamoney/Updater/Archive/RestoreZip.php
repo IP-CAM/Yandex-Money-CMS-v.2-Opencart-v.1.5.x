@@ -186,6 +186,9 @@ class RestoreZip
             $this->prepareDirectory($fileName);
         } else {
             $tmp = $this->zip->getFromIndex($index);
+            if (!is_writable($fileName)) {
+                throw new RuntimeException('Failed to create or open file "' . $fileName . '"');
+            }
             $out = @fopen($fileName, 'wb');
             if (!$out) {
                 throw new RuntimeException('Failed to create or open file "' . $fileName . '"');
