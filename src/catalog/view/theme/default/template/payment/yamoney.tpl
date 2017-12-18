@@ -13,7 +13,7 @@ endif; ?>
             </a>
             <?php else : ?>
             <div class="right">
-                <button id="button-confirm" type="button" class="button"><?php echo $button_confirm; ?></button>
+                <input id="button-confirm" type="button" class="button" value="<?php echo $button_confirm; ?>" />
             </div>
             <?php endif; ?>
         </div>

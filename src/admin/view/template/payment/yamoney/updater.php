@@ -30,7 +30,8 @@
     </div>
 
     <?php if (!empty($backups)) : ?>
-        <div class="row">
+    <div class="row">
+        <div class="col-md-12">
             <h4>Резервные копии</h4>
             <table class="table table-striped table-hover">
                 <thead>
@@ -58,6 +59,7 @@
                 </tbody>
             </table>
         </div>
+    </div>
     <?php endif; ?>
 
 </div>
@@ -65,7 +67,7 @@
 <script type="text/javascript">
     jQuery(document).ready(function () {
         jQuery('button.restore-backup').click(function () {
-            var message = 'Вы действительно хотите восстановить модуль из бэкапа версии ' + this.dataset.version
+            var message = 'Вы действительно хотите восстановить модуль из резервной копии версии ' + this.dataset.version
                 + ' от ' + this.dataset.date + '?';
             if (confirm(message)) {
                 jQuery('#action-form-action').val('restore');
@@ -75,7 +77,7 @@
             }
         });
         jQuery('button.remove-backup').click(function () {
-            var message = 'Вы действительно хотите удалить бэкап модуля версии ' + this.dataset.version
+            var message = 'Вы действительно хотите удалить резервную копию модуля версии ' + this.dataset.version
                 + ' от ' + this.dataset.date + '?';
             if (confirm(message)) {
                 jQuery('#action-form-action').val('remove');

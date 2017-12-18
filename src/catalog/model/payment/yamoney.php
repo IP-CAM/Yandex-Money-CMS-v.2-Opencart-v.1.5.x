@@ -6,6 +6,7 @@ require_once dirname(__FILE__) . '/yamoney/autoload.php';
  * Class ModelPaymentYaMoney
  *
  * @property-read Url $url
+ * @property-read ModelCheckoutOrder $model_checkout_order
  */
 class ModelPaymentYaMoney extends Model
 {
@@ -98,6 +99,41 @@ class ModelPaymentYaMoney extends Model
 
     /**
      * @param YandexMoneyPaymentKassa $paymentMethod
+     * @param $payments
+     * @return \YaMoney\Model\PaymentInterface[]
+     */
+    public function updatePaymentsStatuses(YandexMoneyPaymentKassa $paymentMethod, $payments)
+    {
+        $result = array();
+
+        $this->getPaymentMethods();
+        $client = $this->getClient($paymentMethod);
+        $statuses = array(
+            \YaMoney\Model\PaymentStatus::PENDING,
+            \YaMoney\Model\PaymentStatus::WAITING_FOR_CAPTURE,
+        );
+        foreach ($payments as $payment) {
+            if (in_array($payment['status'], $statuses)) {
+                try {
+                    $paymentObject = $client->getPaymentInfo($payment['payment_id']);
+                    if ($paymentObject === null) {
+                        $this->updatePaymentStatus($payment['payment_id'], \YaMoney\Model\PaymentStatus::CANCELED);
+                    } else {
+                        $result[] = $paymentObject;
+                        if ($paymentObject->getStatus() !== $payment['status']) {
+                            $this->updatePaymentStatus($payment['payment_id'], $paymentObject->getStatus(), $paymentObject->getCapturedAt());
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // nothing to do
+                }
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * @param YandexMoneyPaymentKassa $paymentMethod
      * @param $orderInfo
      * @param $paymentMethodData
      * @return \YaMoney\Model\PaymentInterface
@@ -166,14 +202,14 @@ class ModelPaymentYaMoney extends Model
             return null;
         }
 
-        $idempotencyKey = $orderInfo['order_id'] . '-' . str_replace('.', '-', microtime(true));
+        $key = uniqid('', true);
         try {
-            $paymentInfo = $client->createPayment($request, $idempotencyKey);
+            $paymentInfo = $client->createPayment($request, $key);
             $tries = 1;
             while ($paymentInfo === null) {
                 $this->log('info', 'Payment request retry');
                 sleep(2);
-                $paymentInfo = $client->createPayment($request, $idempotencyKey);
+                $paymentInfo = $client->createPayment($request, $key);
                 $tries++;
                 if ($tries > 3) {
                     throw new Exception('Maximum tries reached');
@@ -224,6 +260,18 @@ class ModelPaymentYaMoney extends Model
             . '`created_at` = VALUES(`created_at`)'
         ;
         return $this->db->query($sql);
+    }
+
+    public function getPendedPayments()
+    {
+        $sql = 'SELECT * FROM `' . DB_PREFIX . 'ya_money_payment` WHERE (`status`=\''
+            . \YaMoney\Model\PaymentStatus::PENDING . '\' OR `status`=\''
+            . \YaMoney\Model\PaymentStatus::WAITING_FOR_CAPTURE . '\')';
+        $res = $this->db->query($sql);
+        if ($res->num_rows) {
+            return $res->rows;
+        }
+        return array();
     }
 
     /**
@@ -286,7 +334,7 @@ class ModelPaymentYaMoney extends Model
         return $payment;
     }
 
-    public function confirmOrder(YandexMoneyPaymentKassa $paymentMethod, $orderId)
+    public function confirmOrder(YandexMoneyPaymentMethod $paymentMethod, $orderId)
     {
         $pay_url = $this->url->link('payment/yamoney/repay', 'order_id=' . $orderId, 'SSL');
         $this->load->model('checkout/order');
@@ -372,11 +420,11 @@ class ModelPaymentYaMoney extends Model
         try {
             $builder = \YaMoney\Request\Payments\Payment\CreateCaptureRequest::builder();
             $builder->setAmount($payment->getAmount());
-            $idempotencyKey = $payment->getId();
+            $key = uniqid('', true);
             $tries = 0;
             $request = $builder->build();
             do {
-                $result = $client->capturePayment($request, $payment->getId(), $idempotencyKey);
+                $result = $client->capturePayment($request, $payment->getId(), $key);
                 if ($result === null) {
                     $tries++;
                     if ($tries > 3) {
@@ -385,6 +433,9 @@ class ModelPaymentYaMoney extends Model
                     sleep(2);
                 }
             } while ($result === null);
+            if ($result === null) {
+                throw new RuntimeException('Failed to capture payment after 3 retries');
+            }
         } catch (Exception $e) {
             $this->log('error', 'Failed to capture payment: ' . $e->getMessage());
             return false;
@@ -420,11 +471,17 @@ class ModelPaymentYaMoney extends Model
                     $replace[] = $value;
                 }
             }
-            $sessionId = $this->session->getId();
+
             $userId = 0;
-            if (isset($this->session->data['user_id'])) {
-                $userId = $this->session->data['user_id'];
+            if ($this->session) {
+                $sessionId = $this->session->getId();
+                if (isset($this->session->data['user_id'])) {
+                    $userId = $this->session->data['user_id'];
+                }
+            } else {
+                $sessionId = 'console';
             }
+
             if (empty($search)) {
                 $log->write('[' . $level . '] [' . $userId . '] [' . $sessionId . '] - ' . $message);
             } else {
@@ -448,5 +505,20 @@ class ModelPaymentYaMoney extends Model
             $this->client->setLogger($this);
         }
         return $this->client;
+    }
+
+    /**
+     * @param string $paymentId
+     * @param string $status
+     * @param \DateTime|null $capturedAt
+     */
+    private function updatePaymentStatus($paymentId, $status, $capturedAt = null)
+    {
+        $sql = 'UPDATE `' . DB_PREFIX . 'ya_money_payment` SET `status` = \'' . $status . '\'';
+        if ($capturedAt !== null) {
+            $sql .= ', `captured_at`=\'' . $capturedAt->format('Y-m-d H:i:s') . '\'';
+        }
+        $sql .= ' WHERE `payment_id`=\'' . $paymentId . '\'';
+        $this->db->query($sql);
     }
 }

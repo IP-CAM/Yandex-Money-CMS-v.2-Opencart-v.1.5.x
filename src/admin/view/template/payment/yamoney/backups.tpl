@@ -3,7 +3,7 @@
 <div id="content" class="container">
     <div class="row">
         <div class="col-12">
-            <h4>Список бэкапов платёжного модуля</h4>
+            <h4>Список резервных копий платёжного модуля</h4>
         </div>
     </div>
 
@@ -25,7 +25,7 @@
     <?php endif; ?>
 
     <?php if (empty($backups)) : ?>
-    <p>Не найдено ни одного бэкапа.</p>
+    <p>Не найдено ни одной резервной копии.</p>
     <?php else: ?>
 
     <table class="table table-striped table-hover">
@@ -34,7 +34,7 @@
             <th>Версия модуля</th>
             <th>Дата создания</th>
             <th>Имя файла</th>
-            <th>Размер файла бэкапа</th>
+            <th>Размер файла</th>
             <th>&nbsp;</th>
         </tr>
         </thead>
@@ -66,7 +66,7 @@
 <script type="text/javascript">
     jQuery(document).ready(function () {
         jQuery('button.restore-backup').click(function () {
-            var message = 'Вы действительно хотите восстановить модуль из бэкапа версии ' + this.dataset.version
+            var message = 'Вы действительно хотите восстановить модуль из резервной копии версии ' + this.dataset.version
                 + ' от ' + this.dataset.date + '?';
             if (confirm(message)) {
                 jQuery('#action-form-action').val('restore');
@@ -76,7 +76,7 @@
             }
         });
         jQuery('button.remove-backup').click(function () {
-            var message = 'Вы действительно хотите удалить бэкап модуля версии ' + this.dataset.version
+            var message = 'Вы действительно хотите удалить резервную копию модуля версии ' + this.dataset.version
                 + ' от ' + this.dataset.date + '?';
             if (confirm(message)) {
                 jQuery('#action-form-action').val('remove');

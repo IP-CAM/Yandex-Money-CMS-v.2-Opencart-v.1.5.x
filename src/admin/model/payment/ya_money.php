@@ -14,6 +14,8 @@ class ModelPaymentYaMoney extends Model
     private $downloadDirectory = 'yamodule';
     private $repository = 'actofgod/oc15-sdk-test';
 
+    private $client;
+
     public function init($config)
     {
         $this->config = $config;
@@ -402,5 +404,61 @@ class ModelPaymentYaMoney extends Model
         if (!file_exists($testFile)) {
             copy(dirname(__FILE__) . '/yamoney/' . $fileName, $testFile);
         }
+    }
+
+    public function getPayments($offset = 0)
+    {
+        $res = $this->db->query('SELECT * FROM `' . DB_PREFIX . 'ya_money_payment` LIMIT ' . (int)$offset . ', 20');
+        if ($res->num_rows) {
+            return $res->rows;
+        }
+        return array();
+    }
+
+    public function updatePaymentsStatuses($payments)
+    {
+        $this->getPaymentMethods();
+        $client = $this->getClient($this->getPaymentMethod(YandexMoneyPaymentMethod::MODE_KASSA));
+        $statuses = array(
+            \YaMoney\Model\PaymentStatus::PENDING,
+        );
+        foreach ($payments as $index => $payment) {
+            if (in_array($payment['status'], $statuses)) {
+
+                $paymentObject = $client->getPaymentInfo($payment['payment_id']);
+                if ($paymentObject === null) {
+                    $this->updatePaymentStatus($payment['payment_id'], \YaMoney\Model\PaymentStatus::CANCELED);
+                    $payments[$index]['status'] = \YaMoney\Model\PaymentStatus::CANCELED;
+                } elseif ($paymentObject->getStatus() !== $payment['status']) {
+                    $this->updatePaymentStatus($payment['payment_id'], $paymentObject->getStatus(), $paymentObject->getCapturedAt());
+                    $payments[$index]['status'] = $paymentObject->getStatus();
+                }
+            }
+        }
+        return $payments;
+    }
+
+    /**
+     * @param YandexMoneyPaymentKassa $paymentMethod
+     * @return \YaMoney\Client\YandexMoneyApi
+     */
+    private function getClient(YandexMoneyPaymentKassa $paymentMethod)
+    {
+        if ($this->client === null) {
+            $this->client = new \YaMoney\Client\YandexMoneyApi();
+            $this->client->setAuth($paymentMethod->getShopId(), $paymentMethod->getPassword());
+            $this->client->setLogger($this);
+        }
+        return $this->client;
+    }
+
+    private function updatePaymentStatus($paymentId, $status, $capturedAt = null)
+    {
+        $sql = 'UPDATE `' . DB_PREFIX . 'ya_money_payment` SET `status` = \'' . $status . '\'';
+        if ($capturedAt !== null) {
+            $sql .= ', `captured_at`=\'' . $capturedAt->format('Y-m-d H:i:s') . '\'';
+        }
+        $sql .= ' WHERE `payment_id`=\'' . $paymentId . '\'';
+        $this->db->query($sql);
     }
 }
